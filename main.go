@@ -101,8 +101,14 @@ func getMedia(ch <-chan SavedMedia, wg *sync.WaitGroup, path string) error {
 	defer wg.Done()
 
 	for m := range ch {
+		filename := generateFilename(m)
+		
+		if _, err := os.Stat(filepath.FromSlash(path+"/"+filename)); err == nil {
+			continue
+		}
+	
 		client := http.Client{
-			Timeout: 10 * time.Second,
+			Timeout: 60 * time.Second,
 		}
 
 		// Get the direct download link
@@ -116,15 +122,15 @@ func getMedia(ch <-chan SavedMedia, wg *sync.WaitGroup, path string) error {
 
 		if resp.StatusCode != 200 {
 			fmt.Println("Server responded with code", resp.StatusCode)
-			os.Exit(2)
+			//os.Exit(2)
+			//fmt.Println(m.DownloadLink)
+			continue
 		}
 
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			panic(err)
 		}
-
-		filename := generateFilename(m)
 
 		//Get file
 		req, _ = http.NewRequest("GET", string(body), nil)
@@ -176,7 +182,7 @@ func generateFilename(m SavedMedia) string {
 	}
 
 	t, _ := time.Parse("2006-01-02 15:04:05 UTC", m.Date)
-	filename := fmt.Sprintf("%s_%v.%s", "snapchat", t.Unix(), ext)
+	filename := fmt.Sprintf("%s_%v.%s", "snapchat", t.Format("2006-01-02_150405"), ext)
 
 	return filename
 }
